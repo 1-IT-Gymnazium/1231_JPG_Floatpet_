@@ -16,7 +16,7 @@ let drawMode = false;
 // Toggle draw mode
 document.getElementById("drawMode").addEventListener("click", () => {
   drawMode = !drawMode;
-  drawCanvas.style.pointerEvents = drawMode ? "all" : "none";
+  drawCanvas.style.pointerEvents = drawMode ? "auto" : "none";
 });
 
 // Get mouse position relative to canvas
@@ -56,12 +56,14 @@ document.getElementById("clearDrawing").addEventListener("click", () => {
   dctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
 });
 
+// Floater storage
+let uploadedImage = null;
+let floaters = [];
+
 // Add drawing as floater
 document.getElementById("addDrawing").addEventListener("click", () => {
   const img = new Image();
   img.src = drawCanvas.toDataURL();
-  drawMode = false;
-  drawCanvas.style.pointerEvents = "none";
 
   floaters.push({
     img: img,
@@ -73,12 +75,12 @@ document.getElementById("addDrawing").addEventListener("click", () => {
   });
 
   dctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+
+  drawMode = false;
+  drawCanvas.style.pointerEvents = "none";
 });
 
 // Upload image
-let uploadedImage = null;
-let floaters = [];
-
 document.getElementById("upload").addEventListener("change", e => {
   const file = e.target.files[0];
   const reader = new FileReader();
