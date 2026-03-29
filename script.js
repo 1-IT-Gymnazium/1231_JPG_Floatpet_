@@ -16,7 +16,7 @@ let drawMode = false;
 // Toggle draw mode
 document.getElementById("drawMode").addEventListener("click", () => {
   drawMode = !drawMode;
-  drawCanvas.style.pointerEvents = drawMode ? "auto" : "none";
+  drawCanvas.style.pointerEvents = drawMode ? "all" : "none";
 });
 
 // Get mouse position relative to canvas
