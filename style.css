@@ -1,3 +1,4 @@
+
 body {
   margin: 0;
   overflow: hidden;
@@ -33,10 +34,18 @@ body {
 
 #controls button:hover {
   background: #1e3c72;
+  }
+#canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
 }
+
 #drawCanvas {
   position: absolute;
   top: 0;
   left: 0;
-  pointer-events: none; /* disabled until draw mode */
+  z-index: 2; /* draw canvas on top */
+  pointer-events: none;
 }
