@@ -60,6 +60,9 @@ document.getElementById("clearDrawing").addEventListener("click", () => {
 document.getElementById("addDrawing").addEventListener("click", () => {
   const img = new Image();
   img.src = drawCanvas.toDataURL();
+  drawMode = false;
+  drawCanvas.style.pointerEvents = "none";
+});
 
   floaters.push({
     img: img,
