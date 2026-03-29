@@ -62,7 +62,6 @@ document.getElementById("addDrawing").addEventListener("click", () => {
   img.src = drawCanvas.toDataURL();
   drawMode = false;
   drawCanvas.style.pointerEvents = "none";
-});
 
   floaters.push({
     img: img,
