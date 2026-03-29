@@ -25,6 +25,22 @@ document.getElementById("upload").addEventListener("change", e => {
 
   reader.readAsDataURL(file);
 });
+//drawing canva??
+document.getElementById("addDrawing").addEventListener("click", () => {
+  const img = new Image();
+  img.src = drawCanvas.toDataURL();
+
+  floaters.push({
+    img: img,
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    dx: (Math.random() - 0.5) * 4,
+    dy: (Math.random() - 0.5) * 4,
+    size: 150
+  });
+
+  dctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+});
 
 // Add floater
 document.getElementById("add").addEventListener("click", () => {
