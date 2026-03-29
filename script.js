@@ -1,3 +1,39 @@
+//drawing?
+const drawCanvas = document.getElementById("drawCanvas");
+const dctx = drawCanvas.getContext("2d");
+
+drawCanvas.width = canvas.width;
+drawCanvas.height = canvas.height;
+
+let drawing = false;
+let drawMode = false;
+
+document.getElementById("drawMode").addEventListener("click", () => {
+  drawMode = !drawMode;
+  drawCanvas.style.pointerEvents = drawMode ? "auto" : "none";
+});
+
+drawCanvas.addEventListener("mousedown", e => {
+  if (!drawMode) return;
+  drawing = true;
+  dctx.beginPath();
+  dctx.moveTo(e.clientX, e.clientY);
+});
+
+drawCanvas.addEventListener("mousemove", e => {
+  if (!drawing) return;
+  dctx.lineTo(e.clientX, e.clientY);
+  dctx.strokeStyle = "white";
+  dctx.lineWidth = 4;
+  dctx.lineCap = "round";
+  dctx.stroke();
+});
+
+drawCanvas.addEventListener("mouseup", () => {
+  drawing = false;
+});
+
+
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
@@ -25,7 +61,7 @@ document.getElementById("upload").addEventListener("change", e => {
 
   reader.readAsDataURL(file);
 });
-//drawing canva??
+//shit, ts is canva animation.
 document.getElementById("addDrawing").addEventListener("click", () => {
   const img = new Image();
   img.src = drawCanvas.toDataURL();
