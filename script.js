@@ -1,28 +1,46 @@
-//drawing?
+// MAIN CANVAS
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+// DRAWING CANVAS
 const drawCanvas = document.getElementById("drawCanvas");
 const dctx = drawCanvas.getContext("2d");
-
-drawCanvas.width = canvas.width;
-drawCanvas.height = canvas.height;
+drawCanvas.width = window.innerWidth;
+drawCanvas.height = window.innerHeight;
 
 let drawing = false;
 let drawMode = false;
 
+// Toggle draw mode
 document.getElementById("drawMode").addEventListener("click", () => {
   drawMode = !drawMode;
   drawCanvas.style.pointerEvents = drawMode ? "auto" : "none";
 });
 
+// Get mouse position relative to canvas
+function getPos(e) {
+  const rect = drawCanvas.getBoundingClientRect();
+  return {
+    x: e.clientX - rect.left,
+    y: e.clientY - rect.top
+  };
+}
+
+// Drawing events
 drawCanvas.addEventListener("mousedown", e => {
   if (!drawMode) return;
   drawing = true;
+  const pos = getPos(e);
   dctx.beginPath();
-  dctx.moveTo(e.clientX, e.clientY);
+  dctx.moveTo(pos.x, pos.y);
 });
 
 drawCanvas.addEventListener("mousemove", e => {
   if (!drawing) return;
-  dctx.lineTo(e.clientX, e.clientY);
+  const pos = getPos(e);
+  dctx.lineTo(pos.x, pos.y);
   dctx.strokeStyle = "white";
   dctx.lineWidth = 4;
   dctx.lineCap = "round";
@@ -33,35 +51,12 @@ drawCanvas.addEventListener("mouseup", () => {
   drawing = false;
 });
 
-
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
-
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-
-let uploadedImage = null;
-let floaters = [];
-
-// Handle window resize
-window.addEventListener("resize", () => {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+// Clear drawing
+document.getElementById("clearDrawing").addEventListener("click", () => {
+  dctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
 });
 
-// Upload image
-document.getElementById("upload").addEventListener("change", e => {
-  const file = e.target.files[0];
-  const reader = new FileReader();
-
-  reader.onload = () => {
-    uploadedImage = new Image();
-    uploadedImage.src = reader.result;
-  };
-
-  reader.readAsDataURL(file);
-});
-//shit, ts is canva animation.
+// Add drawing as floater
 document.getElementById("addDrawing").addEventListener("click", () => {
   const img = new Image();
   img.src = drawCanvas.toDataURL();
@@ -78,7 +73,23 @@ document.getElementById("addDrawing").addEventListener("click", () => {
   dctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
 });
 
-// Add floater
+// Upload image
+let uploadedImage = null;
+let floaters = [];
+
+document.getElementById("upload").addEventListener("change", e => {
+  const file = e.target.files[0];
+  const reader = new FileReader();
+
+  reader.onload = () => {
+    uploadedImage = new Image();
+    uploadedImage.src = reader.result;
+  };
+
+  reader.readAsDataURL(file);
+});
+
+// Add uploaded image as floater
 document.getElementById("add").addEventListener("click", () => {
   if (!uploadedImage) return alert("Upload an image first!");
 
@@ -100,7 +111,6 @@ function animate() {
     f.x += f.dx;
     f.y += f.dy;
 
-    // Bounce off edges
     if (f.x < 0 || f.x + f.size > canvas.width) f.dx *= -1;
     if (f.y < 0 || f.y + f.size > canvas.height) f.dy *= -1;
 
