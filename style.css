@@ -48,5 +48,5 @@ body {
   left: 0;
   z-index: 2; /* draw canvas on top */
   pointer-events: none;
-  background: transparent;
+  background: black;
 }
