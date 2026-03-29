@@ -5,10 +5,13 @@ body {
   background: linear-gradient(135deg, #1e3c72, #2a5298);
   font-family: Arial, sans-serif;
 }
-
 #controls {
   position: fixed;
   z-index: 9999; /* always above draw canvas */
+}
+
+#controls {
+  position: fixed;
   top: 10px;
   left: 10px;
   background: rgba(92, 124, 88, 0.85);
@@ -42,11 +45,11 @@ body {
   left: 0;
   z-index: 1;
 }
+
 #drawCanvas {
   position: absolute;
   top: 0;
   left: 0;
   z-index: 2; /* draw canvas on top */
   pointer-events: none;
-  background: black;
 }
