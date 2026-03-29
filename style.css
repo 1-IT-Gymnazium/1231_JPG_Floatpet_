@@ -1,19 +1,15 @@
-
 body {
   margin: 0;
   overflow: hidden;
   background: linear-gradient(135deg, #1e3c72, #2a5298);
   font-family: Arial, sans-serif;
 }
-#controls {
-  position: fixed;
-  z-index: 9999; /* always above draw canvas */
-}
 
 #controls {
   position: fixed;
   top: 10px;
   left: 10px;
+  z-index: 9999; /* always above everything */
   background: rgba(92, 124, 88, 0.85);
   padding: 12px 16px;
   border-radius: 10px;
@@ -38,7 +34,8 @@ body {
 
 #controls button:hover {
   background: #1e3c72;
-  }
+}
+
 #canvas {
   position: absolute;
   top: 0;
@@ -50,6 +47,7 @@ body {
   position: absolute;
   top: 0;
   left: 0;
-  z-index: 2; /* draw canvas on top */
-  pointer-events: none;
+  z-index: 2;
+  pointer-events: none; /* default: no blocking */
+  background: transparent; /* prevent white screen */
 }
