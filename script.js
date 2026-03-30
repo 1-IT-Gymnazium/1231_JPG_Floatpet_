@@ -71,7 +71,7 @@ document.getElementById("addDrawing").addEventListener("click", () => {
     y: Math.random() * canvas.height,
     dx: (Math.random() - 0.5) * 4,
     dy: (Math.random() - 0.5) * 4,
-    size: canvas.width / 2
+    size: 300
   });
 
   dctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
