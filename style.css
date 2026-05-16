@@ -1,57 +1,223 @@
+:root {
+  --ink: #f7fbff;
+  --muted: #b9c4cc;
+  --panel: rgba(17, 23, 28, 0.84);
+  --panel-border: rgba(255, 255, 255, 0.14);
+  --accent: #39d5b3;
+  --accent-dark: #16856f;
+  --danger: #ff7d7d;
+}
+
+* {
+  box-sizing: border-box;
+}
 
 body {
   margin: 0;
+  min-height: 100vh;
   overflow: hidden;
-  background: linear-gradient(135deg, #1e3c72, #2a5298);
-  font-family: Arial, sans-serif;
-  background-color: black
+  color: var(--ink);
+  font-family: Arial, Helvetica, sans-serif;
+  background:
+    radial-gradient(circle at 18% 20%, rgba(57, 213, 179, 0.24), transparent 32%),
+    radial-gradient(circle at 82% 76%, rgba(255, 198, 92, 0.18), transparent 30%),
+    linear-gradient(135deg, #121920, #26333b 48%, #121414);
 }
-#controls {
+
+button,
+input {
+  font: inherit;
+}
+
+.app,
+canvas {
+  width: 100vw;
+  height: 100vh;
+}
+
+canvas {
   position: fixed;
-  z-index: 9999; /* always above draw canvas */
+  inset: 0;
 }
 
-#controls {
-  position: fixed;
-  top: 10px;
-  left: 10px;
-  background: rgba(92, 124, 88, 0.85);
-  padding: 12px 16px;
-  border-radius: 10px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-  display: flex;
-  gap: 10px;
-}
-
-#controls input,
-#controls button {
-  padding: 6px 10px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  cursor: pointer;
-}
-
-#controls button {
-  background: #2a5298;
-  color: white;
-  border: none;
-}
-
-#controls button:hover {
-  background: #1e3c72;
-  }
 #canvas {
-  position: absolute;
-  top: 0;
-  left: 0;
   z-index: 1;
 }
 
 #drawCanvas {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 2; /* draw canvas on top */
+  z-index: 2;
   pointer-events: none;
-  background-color: transparent
+  touch-action: none;
+}
+
+.toolbar {
+  position: fixed;
+  z-index: 5;
+  top: 16px;
+  left: 16px;
+  width: min(420px, calc(100vw - 32px));
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(14px);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-mark {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background:
+    linear-gradient(135deg, transparent 42%, rgba(255, 255, 255, 0.75) 43% 56%, transparent 57%),
+    conic-gradient(from 30deg, #39d5b3, #ffd166, #ef476f, #39d5b3);
+}
+
+h1,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 1.2rem;
+  line-height: 1.1;
+}
+
+p,
+.status,
+label {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.control-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.control-grid {
+  display: grid;
+  grid-template-columns: 82px 1fr 1fr;
+  gap: 10px;
+  align-items: end;
+}
+
+label {
+  display: grid;
+  gap: 6px;
+}
+
+.file-control input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.file-control span,
+button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 6px;
+  padding: 9px 12px;
+  color: #08231d;
+  background: var(--accent);
+  cursor: pointer;
+  transition: transform 150ms ease, background 150ms ease, opacity 150ms ease;
+}
+
+button:hover,
+.file-control:hover span {
+  transform: translateY(-1px);
+  background: #6fe4cc;
+}
+
+button:active,
+.file-control:active span {
+  transform: translateY(0);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+button.secondary,
+#clearDrawing,
+#clearFloaters {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+#clearDrawing:hover,
+#clearFloaters:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+#drawMode[aria-pressed="true"] {
+  color: #071b17;
+  background: #ffd166;
+}
+
+input[type="color"] {
+  width: 100%;
+  min-height: 38px;
+  padding: 3px;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.status {
+  margin-left: auto;
+}
+
+.drawing-active {
+  cursor: crosshair;
+}
+
+@media (max-width: 620px) {
+  .toolbar {
+    top: 10px;
+    left: 10px;
+    width: calc(100vw - 20px);
+    padding: 12px;
+  }
+
+  .control-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .control-row > *,
+  button,
+  .file-control {
+    flex: 1 1 auto;
+  }
+
+  .file-control span {
+    display: block;
+    text-align: center;
+  }
+
+  .status {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
 }
