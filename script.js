@@ -70,6 +70,7 @@ function setStatus(message) {
 
 function setBackgroundColor(color) {
   document.documentElement.style.setProperty("--stage", color);
+  document.body.style.background = color;
 }
 
 function setDrawMode(active) {
@@ -82,11 +83,10 @@ function setDrawMode(active) {
 
 function getPointerPosition(event) {
   const rect = drawCanvas.getBoundingClientRect();
-  const pointer = event.touches ? event.touches[0] : event;
 
   return {
-    x: pointer.clientX - rect.left,
-    y: pointer.clientY - rect.top
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top
   };
 }
 
@@ -154,6 +154,11 @@ function createFloater(img, preferredSize = 150) {
   };
 }
 
+function addImageFloater(img, preferredSize = 150) {
+  floaters.push(createFloater(img, preferredSize));
+  setStatus(`${floaters.length} floater${floaters.length === 1 ? "" : "s"}`);
+}
+
 function getPhysicsSettings() {
   return {
     bounce: Number(bounceInput.value) / 100,
@@ -185,12 +190,21 @@ function clearDrawing() {
 
 function startDrawing(event) {
   if (!drawMode) return;
+
   event.preventDefault();
   drawing = true;
 
   const pos = getPointerPosition(event);
   dctx.beginPath();
   dctx.moveTo(pos.x, pos.y);
+  dctx.lineTo(pos.x, pos.y);
+  dctx.strokeStyle = brushColorInput.value;
+  dctx.lineWidth = Number(brushSizeInput.value);
+  dctx.lineCap = "round";
+  dctx.lineJoin = "round";
+  dctx.stroke();
+  drawCanvas.setPointerCapture(event.pointerId);
+  setStatus("Drawing...");
 }
 
 function draw(event) {
@@ -210,8 +224,26 @@ function stopDrawing() {
   drawing = false;
 }
 
+function finishDrawing(event) {
+  if (!drawing) return;
+
+  drawing = false;
+
+  if (drawCanvas.hasPointerCapture(event.pointerId)) {
+    drawCanvas.releasePointerCapture(event.pointerId);
+  }
+
+  setStatus("Sketch ready");
+}
+
 drawModeButton.addEventListener("click", () => {
-  setDrawMode(!drawMode);
+  const nextDrawMode = !drawMode;
+
+  setDrawMode(nextDrawMode);
+
+  if (nextDrawMode) {
+    setHudHidden(true);
+  }
 });
 
 hudToggleButton.addEventListener("click", () => {
@@ -267,6 +299,8 @@ uploadInput.addEventListener("change", event => {
 
   if (!file) return;
 
+  setStatus(`Loading ${file.name}`);
+
   const reader = new FileReader();
   reader.onload = () => {
     const img = new Image();
@@ -275,10 +309,23 @@ uploadInput.addEventListener("change", event => {
       uploadedImage = img;
       uploadedFileName = file.name;
       addImageButton.disabled = false;
-      setStatus(`Loaded ${uploadedFileName}`);
+      addImageButton.textContent = "Add Again";
+      addImageFloater(uploadedImage, 150);
+    };
+
+    img.onerror = () => {
+      uploadedImage = null;
+      uploadedFileName = "";
+      addImageButton.disabled = true;
+      addImageButton.textContent = "Add Image";
+      setStatus("That image could not load");
     };
 
     img.src = reader.result;
+  };
+
+  reader.onerror = () => {
+    setStatus("Could not read that file");
   };
 
   reader.readAsDataURL(file);
@@ -290,8 +337,7 @@ addImageButton.addEventListener("click", () => {
     return;
   }
 
-  floaters.push(createFloater(uploadedImage, 150));
-  setStatus(`${floaters.length} floater${floaters.length === 1 ? "" : "s"}`);
+  addImageFloater(uploadedImage, 150);
 });
 
 clearFloatersButton.addEventListener("click", () => {
@@ -299,9 +345,13 @@ clearFloatersButton.addEventListener("click", () => {
   setStatus("Floaters cleared");
 });
 
-backgroundColorInput.addEventListener("input", event => {
+function handleBackgroundInput(event) {
   setBackgroundColor(event.target.value);
-});
+  setStatus("Background changed");
+}
+
+backgroundColorInput.addEventListener("input", handleBackgroundInput);
+backgroundColorInput.addEventListener("change", handleBackgroundInput);
 
 canvas.addEventListener("pointerdown", event => {
   if (drawMode) return;
@@ -355,12 +405,10 @@ canvas.addEventListener("pointercancel", () => {
   document.body.classList.remove("dragging-floater");
 });
 
-drawCanvas.addEventListener("mousedown", startDrawing);
-drawCanvas.addEventListener("mousemove", draw);
-window.addEventListener("mouseup", stopDrawing);
-drawCanvas.addEventListener("touchstart", startDrawing, { passive: false });
-drawCanvas.addEventListener("touchmove", draw, { passive: false });
-window.addEventListener("touchend", stopDrawing);
+drawCanvas.addEventListener("pointerdown", startDrawing);
+drawCanvas.addEventListener("pointermove", draw);
+drawCanvas.addEventListener("pointerup", finishDrawing);
+drawCanvas.addEventListener("pointercancel", finishDrawing);
 window.addEventListener("resize", resizeCanvases);
 
 function animate() {
