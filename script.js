@@ -10,8 +10,12 @@ const clearDrawingButton = document.getElementById("clearDrawing");
 const addDrawingButton = document.getElementById("addDrawing");
 const clearFloatersButton = document.getElementById("clearFloaters");
 const brushColorInput = document.getElementById("brushColor");
+const backgroundColorInput = document.getElementById("backgroundColor");
 const brushSizeInput = document.getElementById("brushSize");
 const speedInput = document.getElementById("speed");
+const bounceInput = document.getElementById("bounce");
+const gravityInput = document.getElementById("gravity");
+const frictionInput = document.getElementById("friction");
 const statusText = document.getElementById("status");
 
 let drawing = false;
@@ -19,6 +23,10 @@ let drawMode = false;
 let uploadedImage = null;
 let uploadedFileName = "";
 let floaters = [];
+let draggedFloater = null;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+let lastPointer = null;
 
 function resizeCanvases() {
   const previousDrawing = document.createElement("canvas");
@@ -53,6 +61,10 @@ function setStatus(message) {
   statusText.textContent = message;
 }
 
+function setBackgroundColor(color) {
+  document.documentElement.style.setProperty("--stage", color);
+}
+
 function setDrawMode(active) {
   drawMode = active;
   drawCanvas.style.pointerEvents = active ? "auto" : "none";
@@ -68,6 +80,15 @@ function getPointerPosition(event) {
   return {
     x: pointer.clientX - rect.left,
     y: pointer.clientY - rect.top
+  };
+}
+
+function getCanvasPointerPosition(event) {
+  const rect = canvas.getBoundingClientRect();
+
+  return {
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top
   };
 }
 
@@ -121,8 +142,34 @@ function createFloater(img, preferredSize = 150) {
     width,
     height,
     rotation: Math.random() * Math.PI * 2,
-    spin: (Math.random() - 0.5) * 0.015
+    spin: (Math.random() - 0.5) * 0.015,
+    grabbed: false
   };
+}
+
+function getPhysicsSettings() {
+  return {
+    bounce: Number(bounceInput.value) / 100,
+    gravity: Number(gravityInput.value) / 100,
+    friction: 1 - Number(frictionInput.value) / 1000
+  };
+}
+
+function findFloaterAt(x, y) {
+  for (let i = floaters.length - 1; i >= 0; i -= 1) {
+    const floater = floaters[i];
+
+    if (
+      x >= floater.x &&
+      x <= floater.x + floater.width &&
+      y >= floater.y &&
+      y <= floater.y + floater.height
+    ) {
+      return floater;
+    }
+  }
+
+  return null;
 }
 
 function clearDrawing() {
@@ -233,6 +280,59 @@ clearFloatersButton.addEventListener("click", () => {
   setStatus("Floaters cleared");
 });
 
+backgroundColorInput.addEventListener("input", event => {
+  setBackgroundColor(event.target.value);
+});
+
+canvas.addEventListener("pointerdown", event => {
+  if (drawMode) return;
+
+  const pos = getCanvasPointerPosition(event);
+  const floater = findFloaterAt(pos.x, pos.y);
+
+  if (!floater) return;
+
+  draggedFloater = floater;
+  draggedFloater.grabbed = true;
+  dragOffsetX = pos.x - floater.x;
+  dragOffsetY = pos.y - floater.y;
+  lastPointer = { x: pos.x, y: pos.y, time: performance.now() };
+  canvas.setPointerCapture(event.pointerId);
+  document.body.classList.add("dragging-floater");
+  setStatus("Throw it");
+});
+
+canvas.addEventListener("pointermove", event => {
+  if (!draggedFloater) return;
+
+  const pos = getCanvasPointerPosition(event);
+  const now = performance.now();
+  const elapsed = Math.max(now - lastPointer.time, 16);
+
+  draggedFloater.x = clamp(pos.x - dragOffsetX, 0, canvas.width - draggedFloater.width);
+  draggedFloater.y = clamp(pos.y - dragOffsetY, 0, canvas.height - draggedFloater.height);
+  draggedFloater.dx = ((pos.x - lastPointer.x) / elapsed) * 16;
+  draggedFloater.dy = ((pos.y - lastPointer.y) / elapsed) * 16;
+  draggedFloater.spin = clamp(draggedFloater.dx * 0.003, -0.08, 0.08);
+  lastPointer = { x: pos.x, y: pos.y, time: now };
+});
+
+canvas.addEventListener("pointerup", event => {
+  if (!draggedFloater) return;
+
+  draggedFloater.grabbed = false;
+  draggedFloater = null;
+  canvas.releasePointerCapture(event.pointerId);
+  document.body.classList.remove("dragging-floater");
+  setStatus("Floater flung");
+});
+
+canvas.addEventListener("pointercancel", () => {
+  if (draggedFloater) draggedFloater.grabbed = false;
+  draggedFloater = null;
+  document.body.classList.remove("dragging-floater");
+});
+
 drawCanvas.addEventListener("mousedown", startDrawing);
 drawCanvas.addEventListener("mousemove", draw);
 window.addEventListener("mouseup", stopDrawing);
@@ -243,37 +343,51 @@ window.addEventListener("resize", resizeCanvases);
 
 function animate() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const physics = getPhysicsSettings();
 
   floaters.forEach(floater => {
+    if (floater.grabbed) {
+      drawFloater(floater);
+      return;
+    }
+
+    floater.dy += physics.gravity;
+    floater.dx *= physics.friction;
+    floater.dy *= physics.friction;
     floater.x += floater.dx;
     floater.y += floater.dy;
     floater.rotation += floater.spin;
 
     if (floater.x <= 0 || floater.x + floater.width >= canvas.width) {
-      floater.dx *= -1;
+      floater.dx *= -physics.bounce;
       floater.x = clamp(floater.x, 0, canvas.width - floater.width);
     }
 
     if (floater.y <= 0 || floater.y + floater.height >= canvas.height) {
-      floater.dy *= -1;
+      floater.dy *= -physics.bounce;
       floater.y = clamp(floater.y, 0, canvas.height - floater.height);
     }
 
-    ctx.save();
-    ctx.translate(floater.x + floater.width / 2, floater.y + floater.height / 2);
-    ctx.rotate(floater.rotation);
-    ctx.drawImage(
-      floater.img,
-      -floater.width / 2,
-      -floater.height / 2,
-      floater.width,
-      floater.height
-    );
-    ctx.restore();
+    drawFloater(floater);
   });
 
   requestAnimationFrame(animate);
 }
 
+function drawFloater(floater) {
+  ctx.save();
+  ctx.translate(floater.x + floater.width / 2, floater.y + floater.height / 2);
+  ctx.rotate(floater.rotation);
+  ctx.drawImage(
+    floater.img,
+    -floater.width / 2,
+    -floater.height / 2,
+    floater.width,
+    floater.height
+  );
+  ctx.restore();
+}
+
+setBackgroundColor(backgroundColorInput.value);
 resizeCanvases();
 animate();
