@@ -1,127 +1,279 @@
-// MAIN CANVAS
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-
-// DRAWING CANVAS
 const drawCanvas = document.getElementById("drawCanvas");
 const dctx = drawCanvas.getContext("2d");
-drawCanvas.width = window.innerWidth;
-drawCanvas.height = window.innerHeight;
+
+const uploadInput = document.getElementById("upload");
+const addImageButton = document.getElementById("addImage");
+const drawModeButton = document.getElementById("drawMode");
+const clearDrawingButton = document.getElementById("clearDrawing");
+const addDrawingButton = document.getElementById("addDrawing");
+const clearFloatersButton = document.getElementById("clearFloaters");
+const brushColorInput = document.getElementById("brushColor");
+const brushSizeInput = document.getElementById("brushSize");
+const speedInput = document.getElementById("speed");
+const statusText = document.getElementById("status");
 
 let drawing = false;
 let drawMode = false;
+let uploadedImage = null;
+let uploadedFileName = "";
+let floaters = [];
 
-// Toggle draw mode
-document.getElementById("drawMode").addEventListener("click", () => {
-  drawMode = !drawMode;
-  drawCanvas.style.pointerEvents = drawMode ? "auto" : "none";
-});
+function resizeCanvases() {
+  const previousDrawing = document.createElement("canvas");
+  previousDrawing.width = drawCanvas.width;
+  previousDrawing.height = drawCanvas.height;
 
-// Get mouse position relative to canvas
-function getPos(e) {
+  if (drawCanvas.width && drawCanvas.height) {
+    previousDrawing.getContext("2d").drawImage(drawCanvas, 0, 0);
+  }
+
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  drawCanvas.width = window.innerWidth;
+  drawCanvas.height = window.innerHeight;
+
+  if (previousDrawing.width && previousDrawing.height) {
+    dctx.drawImage(previousDrawing, 0, 0);
+  }
+
+  floaters = floaters.map(floater => ({
+    ...floater,
+    x: clamp(floater.x, 0, Math.max(canvas.width - floater.width, 0)),
+    y: clamp(floater.y, 0, Math.max(canvas.height - floater.height, 0))
+  }));
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function setStatus(message) {
+  statusText.textContent = message;
+}
+
+function setDrawMode(active) {
+  drawMode = active;
+  drawCanvas.style.pointerEvents = active ? "auto" : "none";
+  drawModeButton.setAttribute("aria-pressed", String(active));
+  document.body.classList.toggle("drawing-active", active);
+  setStatus(active ? "Drawing mode active" : "Ready");
+}
+
+function getPointerPosition(event) {
   const rect = drawCanvas.getBoundingClientRect();
+  const pointer = event.touches ? event.touches[0] : event;
+
   return {
-    x: e.clientX - rect.left,
-    y: e.clientY - rect.top
+    x: pointer.clientX - rect.left,
+    y: pointer.clientY - rect.top
   };
 }
 
-// Drawing events
-drawCanvas.addEventListener("mousedown", e => {
+function drawingHasPixels() {
+  const pixels = dctx.getImageData(0, 0, drawCanvas.width, drawCanvas.height).data;
+
+  for (let i = 3; i < pixels.length; i += 4) {
+    if (pixels[i] !== 0) return true;
+  }
+
+  return false;
+}
+
+function getDrawingBounds() {
+  const imageData = dctx.getImageData(0, 0, drawCanvas.width, drawCanvas.height);
+  const pixels = imageData.data;
+  let minX = drawCanvas.width;
+  let minY = drawCanvas.height;
+  let maxX = 0;
+  let maxY = 0;
+
+  for (let y = 0; y < drawCanvas.height; y += 1) {
+    for (let x = 0; x < drawCanvas.width; x += 1) {
+      const alpha = pixels[(y * drawCanvas.width + x) * 4 + 3];
+
+      if (alpha > 0) {
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+      }
+    }
+  }
+
+  return { minX, minY, maxX, maxY };
+}
+
+function createFloater(img, preferredSize = 150) {
+  const aspect = img.naturalWidth && img.naturalHeight ? img.naturalWidth / img.naturalHeight : 1;
+  const width = aspect >= 1 ? preferredSize : preferredSize * aspect;
+  const height = aspect >= 1 ? preferredSize / aspect : preferredSize;
+  const speed = Number(speedInput.value);
+  const angle = Math.random() * Math.PI * 2;
+
+  return {
+    img,
+    x: Math.random() * Math.max(canvas.width - width, 1),
+    y: Math.random() * Math.max(canvas.height - height, 1),
+    dx: Math.cos(angle) * speed,
+    dy: Math.sin(angle) * speed,
+    width,
+    height,
+    rotation: Math.random() * Math.PI * 2,
+    spin: (Math.random() - 0.5) * 0.015
+  };
+}
+
+function clearDrawing() {
+  dctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+}
+
+function startDrawing(event) {
   if (!drawMode) return;
+  event.preventDefault();
   drawing = true;
-  const pos = getPos(e);
+
+  const pos = getPointerPosition(event);
   dctx.beginPath();
   dctx.moveTo(pos.x, pos.y);
-});
+}
 
-drawCanvas.addEventListener("mousemove", e => {
+function draw(event) {
   if (!drawing) return;
-  const pos = getPos(e);
+  event.preventDefault();
+
+  const pos = getPointerPosition(event);
   dctx.lineTo(pos.x, pos.y);
-  dctx.strokeStyle = "white";
-  dctx.lineWidth = 4;
+  dctx.strokeStyle = brushColorInput.value;
+  dctx.lineWidth = Number(brushSizeInput.value);
   dctx.lineCap = "round";
+  dctx.lineJoin = "round";
   dctx.stroke();
-});
+}
 
-drawCanvas.addEventListener("mouseup", () => {
+function stopDrawing() {
   drawing = false;
+}
+
+drawModeButton.addEventListener("click", () => {
+  setDrawMode(!drawMode);
 });
 
-// Clear drawing
-document.getElementById("clearDrawing").addEventListener("click", () => {
-  dctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+clearDrawingButton.addEventListener("click", () => {
+  clearDrawing();
+  setStatus("Sketch cleared");
 });
 
-// Floater storage
-let uploadedImage = null;
-let floaters = [];
+addDrawingButton.addEventListener("click", () => {
+  if (!drawingHasPixels()) {
+    setStatus("Draw something first");
+    return;
+  }
 
-// Add drawing as floater
-document.getElementById("addDrawing").addEventListener("click", () => {
+  const bounds = getDrawingBounds();
+  const padding = 18;
+  const cropX = Math.max(bounds.minX - padding, 0);
+  const cropY = Math.max(bounds.minY - padding, 0);
+  const cropWidth = Math.min(bounds.maxX - bounds.minX + padding * 2, drawCanvas.width - cropX);
+  const cropHeight = Math.min(bounds.maxY - bounds.minY + padding * 2, drawCanvas.height - cropY);
+  const croppedCanvas = document.createElement("canvas");
+
+  croppedCanvas.width = cropWidth;
+  croppedCanvas.height = cropHeight;
+  croppedCanvas
+    .getContext("2d")
+    .drawImage(drawCanvas, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+
   const img = new Image();
-  img.src = drawCanvas.toDataURL();
+  img.onload = () => {
+    floaters.push(createFloater(img, Math.min(220, Math.max(cropWidth, cropHeight))));
+    setStatus(`${floaters.length} floater${floaters.length === 1 ? "" : "s"}`);
+  };
+  img.src = croppedCanvas.toDataURL("image/png");
 
-  floaters.push({
-    img: img,
-    x: Math.random() * canvas.width,
-    y: Math.random() * canvas.height,
-    dx: (Math.random() - 0.5) * 4,
-    dy: (Math.random() - 0.5) * 4,
-    size: 200
-  });
-
-  dctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
-
-  drawMode = false;
-  drawCanvas.style.pointerEvents = "none";
+  clearDrawing();
+  setDrawMode(false);
 });
 
-// Upload image
-document.getElementById("upload").addEventListener("change", e => {
-  const file = e.target.files[0];
-  const reader = new FileReader();
+uploadInput.addEventListener("change", event => {
+  const file = event.target.files[0];
 
+  if (!file) return;
+
+  const reader = new FileReader();
   reader.onload = () => {
-    uploadedImage = new Image();
-    uploadedImage.src = reader.result;
+    const img = new Image();
+
+    img.onload = () => {
+      uploadedImage = img;
+      uploadedFileName = file.name;
+      addImageButton.disabled = false;
+      setStatus(`Loaded ${uploadedFileName}`);
+    };
+
+    img.src = reader.result;
   };
 
   reader.readAsDataURL(file);
 });
 
-// Add uploaded image as floater
-document.getElementById("add").addEventListener("click", () => {
-  if (!uploadedImage) return alert("Upload an image first!");
+addImageButton.addEventListener("click", () => {
+  if (!uploadedImage) {
+    setStatus("Upload an image first");
+    return;
+  }
 
-  floaters.push({
-    img: uploadedImage,
-    x: Math.random() * canvas.width,
-    y: Math.random() * canvas.height,
-    dx: (Math.random() - 0.5) * 4,
-    dy: (Math.random() - 0.5) * 4,
-    size: 120
-  });
+  floaters.push(createFloater(uploadedImage, 150));
+  setStatus(`${floaters.length} floater${floaters.length === 1 ? "" : "s"}`);
 });
 
-// Animation loop
+clearFloatersButton.addEventListener("click", () => {
+  floaters = [];
+  setStatus("Floaters cleared");
+});
+
+drawCanvas.addEventListener("mousedown", startDrawing);
+drawCanvas.addEventListener("mousemove", draw);
+window.addEventListener("mouseup", stopDrawing);
+drawCanvas.addEventListener("touchstart", startDrawing, { passive: false });
+drawCanvas.addEventListener("touchmove", draw, { passive: false });
+window.addEventListener("touchend", stopDrawing);
+window.addEventListener("resize", resizeCanvases);
+
 function animate() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  floaters.forEach(f => {
-    f.x += f.dx;
-    f.y += f.dy;
+  floaters.forEach(floater => {
+    floater.x += floater.dx;
+    floater.y += floater.dy;
+    floater.rotation += floater.spin;
 
-    if (f.x < 0 || f.x + f.size > canvas.width) f.dx *= -1;
-    if (f.y < 0 || f.y + f.size > canvas.height) f.dy *= -1;
+    if (floater.x <= 0 || floater.x + floater.width >= canvas.width) {
+      floater.dx *= -1;
+      floater.x = clamp(floater.x, 0, canvas.width - floater.width);
+    }
 
-    ctx.drawImage(f.img, f.x, f.y, f.size, f.size);
+    if (floater.y <= 0 || floater.y + floater.height >= canvas.height) {
+      floater.dy *= -1;
+      floater.y = clamp(floater.y, 0, canvas.height - floater.height);
+    }
+
+    ctx.save();
+    ctx.translate(floater.x + floater.width / 2, floater.y + floater.height / 2);
+    ctx.rotate(floater.rotation);
+    ctx.drawImage(
+      floater.img,
+      -floater.width / 2,
+      -floater.height / 2,
+      floater.width,
+      floater.height
+    );
+    ctx.restore();
   });
 
   requestAnimationFrame(animate);
 }
 
+resizeCanvases();
 animate();
