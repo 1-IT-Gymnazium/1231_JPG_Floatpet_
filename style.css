@@ -15,11 +15,12 @@
 
 body {
   margin: 0;
-  min-height: 100vh;
+  min-height: 100dvh;
   overflow: hidden;
   color: var(--ink);
   font-family: Arial, Helvetica, sans-serif;
   background: var(--stage);
+  overscroll-behavior: none;
 }
 
 button,
@@ -30,7 +31,7 @@ input {
 .app,
 canvas {
   width: 100vw;
-  height: 100vh;
+  height: 100dvh;
 }
 
 canvas {
@@ -56,6 +57,7 @@ canvas {
   top: 16px;
   left: 16px;
   width: min(420px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
   display: grid;
   gap: 12px;
   padding: 14px;
@@ -66,6 +68,24 @@ canvas {
   backdrop-filter: blur(14px);
   pointer-events: auto;
   user-select: none;
+  overflow: auto;
+  scrollbar-width: thin;
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.hud-toggle {
+  position: fixed;
+  z-index: 11;
+  top: 16px;
+  right: 16px;
+  min-width: 94px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.32);
+}
+
+.hud-hidden .toolbar {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(calc(-100% - 32px));
 }
 
 .brand {
@@ -200,21 +220,31 @@ input[type="range"] {
 }
 
 @media (max-width: 620px) {
+  h1 {
+    font-size: 1rem;
+  }
+
+  p {
+    display: none;
+  }
+
   .toolbar {
     top: 10px;
     left: 10px;
     width: calc(100vw - 20px);
+    max-height: min(68dvh, 560px);
     padding: 12px;
+    gap: 10px;
   }
 
   .control-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
   }
 
   .control-row > *,
   button,
   .file-control {
-    flex: 1 1 auto;
+    flex: 1 1 calc(50% - 8px);
   }
 
   .file-control span {
@@ -225,5 +255,19 @@ input[type="range"] {
   .status {
     flex-basis: 100%;
     margin-left: 0;
+  }
+
+  .hud-toggle {
+    top: auto;
+    right: 10px;
+    bottom: 10px;
+    min-width: 88px;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 380px) {
+  .control-grid {
+    grid-template-columns: 1fr;
   }
 }
