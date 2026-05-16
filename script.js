@@ -3,6 +3,7 @@ const ctx = canvas.getContext("2d");
 const drawCanvas = document.getElementById("drawCanvas");
 const dctx = drawCanvas.getContext("2d");
 
+const hudToggleButton = document.getElementById("hudToggle");
 const uploadInput = document.getElementById("upload");
 const addImageButton = document.getElementById("addImage");
 const drawModeButton = document.getElementById("drawMode");
@@ -27,6 +28,12 @@ let draggedFloater = null;
 let dragOffsetX = 0;
 let dragOffsetY = 0;
 let lastPointer = null;
+
+function setHudHidden(hidden) {
+  document.body.classList.toggle("hud-hidden", hidden);
+  hudToggleButton.textContent = hidden ? "Show HUD" : "Hide HUD";
+  hudToggleButton.setAttribute("aria-expanded", String(!hidden));
+}
 
 function resizeCanvases() {
   const previousDrawing = document.createElement("canvas");
@@ -207,6 +214,18 @@ drawModeButton.addEventListener("click", () => {
   setDrawMode(!drawMode);
 });
 
+hudToggleButton.addEventListener("click", () => {
+  setHudHidden(!document.body.classList.contains("hud-hidden"));
+});
+
+window.addEventListener("keydown", event => {
+  const typingInInput = event.target instanceof Element && event.target.matches("input");
+
+  if (event.key.toLowerCase() === "h" && !typingInInput) {
+    setHudHidden(!document.body.classList.contains("hud-hidden"));
+  }
+});
+
 clearDrawingButton.addEventListener("click", () => {
   clearDrawing();
   setStatus("Sketch cleared");
@@ -292,6 +311,7 @@ canvas.addEventListener("pointerdown", event => {
 
   if (!floater) return;
 
+  event.preventDefault();
   draggedFloater = floater;
   draggedFloater.grabbed = true;
   dragOffsetX = pos.x - floater.x;
@@ -305,6 +325,7 @@ canvas.addEventListener("pointerdown", event => {
 canvas.addEventListener("pointermove", event => {
   if (!draggedFloater) return;
 
+  event.preventDefault();
   const pos = getCanvasPointerPosition(event);
   const now = performance.now();
   const elapsed = Math.max(now - lastPointer.time, 16);
@@ -320,6 +341,7 @@ canvas.addEventListener("pointermove", event => {
 canvas.addEventListener("pointerup", event => {
   if (!draggedFloater) return;
 
+  event.preventDefault();
   draggedFloater.grabbed = false;
   draggedFloater = null;
   canvas.releasePointerCapture(event.pointerId);
