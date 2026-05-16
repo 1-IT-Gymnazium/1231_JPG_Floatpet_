@@ -1,6 +1,19 @@
-const canvas = document.getElementById("canvas");
+function ensureCanvas(id, label) {
+  let element = document.getElementById(id);
+
+  if (!element) {
+    element = document.createElement("canvas");
+    element.id = id;
+    element.setAttribute("aria-label", label);
+    document.querySelector(".app")?.appendChild(element);
+  }
+
+  return element;
+}
+
+const canvas = ensureCanvas("canvas", "Animated floating objects");
 const ctx = canvas.getContext("2d");
-const drawCanvas = document.getElementById("drawCanvas");
+const drawCanvas = ensureCanvas("drawCanvas", "Drawing canvas");
 const dctx = drawCanvas.getContext("2d");
 
 const hudToggleButton = document.getElementById("hudToggle");
@@ -237,13 +250,7 @@ function finishDrawing(event) {
 }
 
 drawModeButton.addEventListener("click", () => {
-  const nextDrawMode = !drawMode;
-
-  setDrawMode(nextDrawMode);
-
-  if (nextDrawMode) {
-    setHudHidden(true);
-  }
+  setDrawMode(!drawMode);
 });
 
 hudToggleButton.addEventListener("click", () => {
