@@ -1,23 +1,61 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>FloatCanvas Prototype</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FloatCanvas</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <main class="app" aria-label="FloatCanvas interactive canvas app">
+    <section class="toolbar" aria-label="Canvas controls">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <div>
+          <h1>FloatCanvas</h1>
+          <p>Draw, upload, and launch floating objects.</p>
+        </div>
+      </div>
 
-<div id="controls">
-  <input type="file" id="upload" accept="image/*">
-  <button id="add">Add Floating Image</button>
-  <button id="drawMode">Draw Mode</button>
-  <button id="clearDrawing">Clear Drawing</button>
-  <button id="addDrawing">Add Drawing as Floater</button>
-</div>
+      <div class="control-row">
+        <label class="file-control">
+          <input type="file" id="upload" accept="image/*">
+          <span>Upload Image</span>
+        </label>
+        <button id="addImage" type="button" disabled>Add Image</button>
+      </div>
 
-<canvas id="canvas"></canvas>
-<canvas id="drawCanvas"></canvas>
+      <div class="control-row">
+        <button id="drawMode" type="button" aria-pressed="false">Draw Mode</button>
+        <button id="addDrawing" type="button">Launch Drawing</button>
+        <button id="clearDrawing" type="button">Clear Sketch</button>
+      </div>
 
-<script src="script.js"></script>
+      <div class="control-grid">
+        <label>
+          Brush
+          <input type="color" id="brushColor" value="#ffffff">
+        </label>
+        <label>
+          Size
+          <input type="range" id="brushSize" min="2" max="24" value="6">
+        </label>
+        <label>
+          Speed
+          <input type="range" id="speed" min="1" max="8" value="4">
+        </label>
+      </div>
+
+      <div class="control-row">
+        <button id="clearFloaters" type="button">Clear Floaters</button>
+        <span id="status" class="status" role="status">Ready</span>
+      </div>
+    </section>
+
+    <canvas id="canvas" aria-label="Animated floating objects"></canvas>
+    <canvas id="drawCanvas" aria-label="Drawing canvas"></canvas>
+  </main>
+
+  <script src="script.js"></script>
 </body>
 </html>
