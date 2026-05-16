@@ -8,7 +8,17 @@
 </head>
 <body>
   <main class="app" aria-label="FloatCanvas interactive canvas app">
-    <section class="toolbar" aria-label="Canvas controls">
+    <button
+      class="hud-toggle"
+      id="hudToggle"
+      type="button"
+      aria-controls="toolbar"
+      aria-expanded="true"
+    >
+      Hide HUD
+    </button>
+
+    <section class="toolbar" id="toolbar" aria-label="Canvas controls">
       <div class="brand">
         <span class="brand-mark" aria-hidden="true"></span>
         <div>
@@ -68,10 +78,4 @@
       </div>
     </section>
 
-    <canvas id="canvas" aria-label="Animated floating objects"></canvas>
-    <canvas id="drawCanvas" aria-label="Drawing canvas"></canvas>
-  </main>
-
-  <script src="script.js"></script>
-</body>
-</html>
+    <canvas id="ca
