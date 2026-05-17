@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>FloatCanvas</title>
-  <link rel="stylesheet" href="style.css?v=4">
-  <script src="script.js?v=4" defer></script>
+  <link rel="stylesheet" href="style.css?v=5">
+  <script src="script.js?v=5" defer></script>
 </head>
 <body>
   <main class="app" aria-label="FloatCanvas interactive canvas app">
@@ -40,6 +40,11 @@
         <button id="drawMode" type="button" aria-pressed="false">Draw Mode</button>
         <button id="addDrawing" type="button">Launch Drawing</button>
         <button id="clearDrawing" type="button">Clear Sketch</button>
+      </div>
+
+      <div class="control-row">
+        <button id="undo" type="button" disabled>Undo</button>
+        <button id="redo" type="button" disabled>Redo</button>
       </div>
 
       <div class="control-grid">
