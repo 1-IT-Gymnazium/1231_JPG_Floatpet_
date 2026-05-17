@@ -22,6 +22,8 @@ const addImageButton = document.getElementById("addImage");
 const drawModeButton = document.getElementById("drawMode");
 const clearDrawingButton = document.getElementById("clearDrawing");
 const addDrawingButton = document.getElementById("addDrawing");
+const undoButton = document.getElementById("undo");
+const redoButton = document.getElementById("redo");
 const clearFloatersButton = document.getElementById("clearFloaters");
 const brushColorInput = document.getElementById("brushColor");
 const backgroundColorInput = document.getElementById("backgroundColor");
@@ -41,6 +43,12 @@ let draggedFloater = null;
 let dragOffsetX = 0;
 let dragOffsetY = 0;
 let lastPointer = null;
+let undoStack = [];
+let redoStack = [];
+let restoringHistory = false;
+let backgroundChangeStarted = false;
+let lastBackgroundColor = backgroundColorInput.value;
+const historyLimit = 40;
 
 function setHudHidden(hidden) {
   document.body.classList.toggle("hud-hidden", hidden);
@@ -84,6 +92,82 @@ function setStatus(message) {
 function setBackgroundColor(color) {
   document.documentElement.style.setProperty("--stage", color);
   document.body.style.background = color;
+}
+
+function copyFloaters(source) {
+  return source.map(floater => ({ ...floater }));
+}
+
+function captureState() {
+  return {
+    background: backgroundColorInput.value,
+    drawing: drawCanvas.width && drawCanvas.height ? drawCanvas.toDataURL("image/png") : null,
+    drawMode,
+    floaters: copyFloaters(floaters)
+  };
+}
+
+function updateHistoryButtons() {
+  undoButton.disabled = undoStack.length === 0;
+  redoButton.disabled = redoStack.length === 0;
+}
+
+function pushHistoryState(state) {
+  undoStack.push(state);
+
+  if (undoStack.length > historyLimit) {
+    undoStack.shift();
+  }
+
+  redoStack = [];
+  updateHistoryButtons();
+}
+
+function saveHistory() {
+  if (restoringHistory) return;
+
+  pushHistoryState(captureState());
+}
+
+function restoreDrawing(dataUrl) {
+  dctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+
+  if (!dataUrl) return;
+
+  const img = new Image();
+  img.onload = () => {
+    dctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+    dctx.drawImage(img, 0, 0);
+  };
+  img.src = dataUrl;
+}
+
+function restoreState(state) {
+  restoringHistory = true;
+  floaters = copyFloaters(state.floaters);
+  backgroundColorInput.value = state.background;
+  setBackgroundColor(state.background);
+  lastBackgroundColor = state.background;
+  setDrawMode(state.drawMode);
+  restoreDrawing(state.drawing);
+  restoringHistory = false;
+  updateHistoryButtons();
+}
+
+function undo() {
+  if (undoStack.length === 0) return;
+
+  redoStack.push(captureState());
+  restoreState(undoStack.pop());
+  setStatus("Undo");
+}
+
+function redo() {
+  if (redoStack.length === 0) return;
+
+  undoStack.push(captureState());
+  restoreState(redoStack.pop());
+  setStatus("Redo");
 }
 
 function setDrawMode(active) {
@@ -167,7 +251,11 @@ function createFloater(img, preferredSize = 150) {
   };
 }
 
-function addImageFloater(img, preferredSize = 150) {
+function addImageFloater(img, preferredSize = 150, shouldSaveHistory = true) {
+  if (shouldSaveHistory) {
+    saveHistory();
+  }
+
   floaters.push(createFloater(img, preferredSize));
   setStatus(`${floaters.length} floater${floaters.length === 1 ? "" : "s"}`);
 }
@@ -205,6 +293,7 @@ function startDrawing(event) {
   if (!drawMode) return;
 
   event.preventDefault();
+  saveHistory();
   drawing = true;
 
   const pos = getPointerPosition(event);
@@ -260,12 +349,31 @@ hudToggleButton.addEventListener("click", () => {
 window.addEventListener("keydown", event => {
   const typingInInput = event.target instanceof Element && event.target.matches("input");
 
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z" && !typingInInput) {
+    event.preventDefault();
+
+    if (event.shiftKey) {
+      redo();
+    } else {
+      undo();
+    }
+
+    return;
+  }
+
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "y" && !typingInInput) {
+    event.preventDefault();
+    redo();
+    return;
+  }
+
   if (event.key.toLowerCase() === "h" && !typingInInput) {
     setHudHidden(!document.body.classList.contains("hud-hidden"));
   }
 });
 
 clearDrawingButton.addEventListener("click", () => {
+  saveHistory();
   clearDrawing();
   setStatus("Sketch cleared");
 });
@@ -276,6 +384,7 @@ addDrawingButton.addEventListener("click", () => {
     return;
   }
 
+  saveHistory();
   const bounds = getDrawingBounds();
   const padding = 18;
   const cropX = Math.max(bounds.minX - padding, 0);
@@ -291,10 +400,9 @@ addDrawingButton.addEventListener("click", () => {
     .drawImage(drawCanvas, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
 
   const img = new Image();
-  img.onload = () => {
-    floaters.push(createFloater(img, Math.min(220, Math.max(cropWidth, cropHeight))));
-    setStatus(`${floaters.length} floater${floaters.length === 1 ? "" : "s"}`);
-  };
+    img.onload = () => {
+      addImageFloater(img, Math.min(220, Math.max(cropWidth, cropHeight)), false);
+    };
   img.src = croppedCanvas.toDataURL("image/png");
 
   clearDrawing();
@@ -348,17 +456,32 @@ addImageButton.addEventListener("click", () => {
 });
 
 clearFloatersButton.addEventListener("click", () => {
+  saveHistory();
   floaters = [];
   setStatus("Floaters cleared");
 });
 
 function handleBackgroundInput(event) {
+  if (!backgroundChangeStarted) {
+    const previousState = captureState();
+    previousState.background = lastBackgroundColor;
+    pushHistoryState(previousState);
+    backgroundChangeStarted = true;
+  }
+
   setBackgroundColor(event.target.value);
+  lastBackgroundColor = event.target.value;
   setStatus("Background changed");
 }
 
 backgroundColorInput.addEventListener("input", handleBackgroundInput);
-backgroundColorInput.addEventListener("change", handleBackgroundInput);
+backgroundColorInput.addEventListener("change", event => {
+  handleBackgroundInput(event);
+  backgroundChangeStarted = false;
+});
+
+undoButton.addEventListener("click", undo);
+redoButton.addEventListener("click", redo);
 
 canvas.addEventListener("pointerdown", event => {
   if (drawMode) return;
@@ -466,5 +589,6 @@ function drawFloater(floater) {
 }
 
 setBackgroundColor(backgroundColorInput.value);
+lastBackgroundColor = backgroundColorInput.value;
 resizeCanvases();
 animate();
